@@ -1,0 +1,88 @@
+@import 'tailwindcss';
+@plugin '@tailwindcss/forms';
+@plugin '@tailwindcss/typography';
+@plugin "daisyui";
+
+:root {
+	--tomb-bg: #0a0a0c;
+	--tomb-surface: #111114;
+	--tomb-surface-raised: #18181c;
+	--tomb-surface-hover: #1f1f24;
+	--tomb-border: #2a2a30;
+	--tomb-border-subtle: #1e1e23;
+	--tomb-text: #e8e6e3;
+	--tomb-text-muted: #8a8890;
+	--tomb-text-dim: #5a5860;
+	--tomb-gold: #c9a84c;
+	--tomb-gold-dim: #a08535;
+	--tomb-gold-glow: rgb(201 168 76 / 12%);
+	--tomb-red: #c44040;
+	--font-display: 'Cormorant Garamond', Georgia, serif;
+	--font-body: 'Outfit', system-ui, sans-serif;
+}
+
+html {
+	background: var(--tomb-bg);
+	color: var(--tomb-text);
+	font-family: var(--font-body);
+	overscroll-behavior: none;
+}
+
+body {
+	background: var(--tomb-bg);
+	min-height: 100dvh;
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+	-webkit-text-size-adjust: 100%;
+}
+
+@media (max-width: 768px) {
+	::-webkit-scrollbar {
+		display: none;
+	}
+
+	body,
+	html {
+		-ms-overflow-style: none;
+		scrollbar-width: none;
+	}
+}
+
+@media (min-width: 769px) {
+	::-webkit-scrollbar {
+		width: 5px;
+	}
+
+	::-webkit-scrollbar-track {
+		background: var(--tomb-bg);
+	}
+
+	::-webkit-scrollbar-thumb {
+		background: var(--tomb-border);
+		border-radius: 3px;
+	}
+}
+
+img {
+	-webkit-touch-callout: none;
+	-webkit-user-drag: none;
+	user-select: none;
+}
+
+:focus-visible {
+	outline: 2px solid var(--tomb-gold);
+	outline-offset: 2px;
+}
+
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+	.safe-bottom {
+		padding-bottom: env(safe-area-inset-bottom);
+	}
+}
+
+.reader-lock {
+	position: fixed;
+	inset: 0;
+	overflow: hidden;
+	touch-action: none;
+}

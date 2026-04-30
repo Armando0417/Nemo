@@ -1,0 +1,534 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Codex Vault Selective Reindex</title>
+		<style>
+			:root {
+				color-scheme: dark;
+				--bg: #0f1115;
+				--panel: #171a21;
+				--panel-2: #1f2430;
+				--border: #2b3140;
+				--text: #e8ecf4;
+				--muted: #97a0b3;
+				--accent: #7dd3fc;
+				--danger: #f87171;
+				--ok: #4ade80;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			body {
+				margin: 0;
+				font-family:
+					"Segoe UI",
+					ui-sans-serif,
+					system-ui,
+					sans-serif;
+				background:
+					radial-gradient(circle at top, rgba(125, 211, 252, 0.14), transparent 28%),
+					var(--bg);
+				color: var(--text);
+			}
+
+			main {
+				max-width: 1200px;
+				margin: 0 auto;
+				padding: 28px 18px 36px;
+			}
+
+			.hero,
+			.panel {
+				border: 1px solid var(--border);
+				border-radius: 18px;
+				background: rgba(23, 26, 33, 0.94);
+				box-shadow: 0 24px 60px rgba(0, 0, 0, 0.24);
+			}
+
+			.hero {
+				padding: 22px;
+				margin-bottom: 18px;
+			}
+
+			h1 {
+				margin: 0;
+				font-size: clamp(1.6rem, 2vw, 2.1rem);
+			}
+
+			p {
+				margin: 10px 0 0;
+				color: var(--muted);
+				line-height: 1.6;
+			}
+
+			.toolbar {
+				display: grid;
+				grid-template-columns: minmax(0, 1fr) auto auto auto;
+				gap: 10px;
+				align-items: center;
+				padding: 16px 18px;
+				border-bottom: 1px solid var(--border);
+			}
+
+			.search {
+				width: 100%;
+				padding: 12px 14px;
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				background: var(--panel-2);
+				color: var(--text);
+			}
+
+			button {
+				padding: 11px 14px;
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				background: var(--panel-2);
+				color: var(--text);
+				cursor: pointer;
+				font-weight: 600;
+			}
+
+			button:hover {
+				border-color: #42506b;
+			}
+
+			button.primary {
+				background: linear-gradient(180deg, #0f9fdb, #0479a8);
+				border-color: #0d95cc;
+			}
+
+			button.primary:disabled {
+				opacity: 0.55;
+				cursor: wait;
+			}
+
+			.summary {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 12px;
+				padding: 14px 18px;
+				border-bottom: 1px solid var(--border);
+				color: var(--muted);
+				font-size: 0.95rem;
+			}
+
+			.table-wrap {
+				overflow: auto;
+			}
+
+			table {
+				width: 100%;
+				border-collapse: collapse;
+			}
+
+			th,
+			td {
+				padding: 12px 14px;
+				border-bottom: 1px solid rgba(43, 49, 64, 0.8);
+				text-align: left;
+				vertical-align: top;
+			}
+
+			th {
+				position: sticky;
+				top: 0;
+				background: rgba(23, 26, 33, 0.98);
+				font-size: 0.82rem;
+				text-transform: uppercase;
+				letter-spacing: 0.08em;
+				color: var(--muted);
+			}
+
+			tbody tr:hover {
+				background: rgba(255, 255, 255, 0.02);
+			}
+
+			.title {
+				font-weight: 700;
+			}
+
+			.meta {
+				margin-top: 4px;
+				color: var(--muted);
+				font-size: 0.9rem;
+			}
+
+			.path {
+				font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+				font-size: 0.82rem;
+				color: #b8c0d4;
+				word-break: break-all;
+			}
+
+			.status-pill {
+				display: inline-flex;
+				padding: 4px 10px;
+				border-radius: 999px;
+				border: 1px solid var(--border);
+				font-size: 0.78rem;
+				color: var(--muted);
+			}
+
+			.results {
+				margin-top: 18px;
+				padding: 16px 18px;
+				border: 1px solid var(--border);
+				border-radius: 16px;
+				background: rgba(23, 26, 33, 0.9);
+				display: none;
+			}
+
+			.results.visible {
+				display: block;
+			}
+
+			.results.ok {
+				border-color: rgba(74, 222, 128, 0.35);
+			}
+
+			.results.error {
+				border-color: rgba(248, 113, 113, 0.35);
+			}
+
+			.results h2 {
+				margin: 0 0 10px;
+				font-size: 1rem;
+			}
+
+			.results pre {
+				margin: 0;
+				white-space: pre-wrap;
+				word-break: break-word;
+				color: var(--muted);
+				line-height: 1.55;
+			}
+
+			dialog {
+				width: min(560px, calc(100vw - 28px));
+				padding: 0;
+				border: 1px solid var(--border);
+				border-radius: 18px;
+				background: rgba(23, 26, 33, 0.98);
+				color: var(--text);
+				box-shadow: 0 30px 80px rgba(0, 0, 0, 0.38);
+			}
+
+			dialog::backdrop {
+				background: rgba(3, 6, 12, 0.7);
+				backdrop-filter: blur(4px);
+			}
+
+			.dialog-body {
+				padding: 20px 20px 18px;
+			}
+
+			.dialog-body h2 {
+				margin: 0 0 10px;
+				font-size: 1.15rem;
+			}
+
+			.dialog-body p {
+				margin: 0;
+			}
+
+			.dialog-preview {
+				margin-top: 16px;
+				padding: 14px;
+				border: 1px solid var(--border);
+				border-radius: 14px;
+				background: rgba(255, 255, 255, 0.025);
+			}
+
+			.dialog-preview strong {
+				display: block;
+				margin-bottom: 8px;
+				font-size: 0.92rem;
+			}
+
+			.dialog-preview ul {
+				margin: 0;
+				padding-left: 18px;
+				color: var(--muted);
+				line-height: 1.55;
+			}
+
+			.dialog-preview li + li {
+				margin-top: 4px;
+			}
+
+			.dialog-actions {
+				display: flex;
+				justify-content: flex-end;
+				gap: 10px;
+				padding: 0 20px 20px;
+			}
+
+			.checkbox-cell {
+				width: 68px;
+				text-align: center;
+			}
+
+			input[type='checkbox'] {
+				width: 18px;
+				height: 18px;
+				accent-color: var(--accent);
+				cursor: pointer;
+			}
+
+			.empty {
+				padding: 20px;
+				color: var(--muted);
+			}
+
+			@media (max-width: 860px) {
+				.toolbar {
+					grid-template-columns: 1fr 1fr;
+				}
+
+				.summary {
+					font-size: 0.88rem;
+				}
+			}
+		</style>
+	</head>
+	<body>
+		<main>
+			<section class="hero">
+				<h1>Selective Reindex</h1>
+				<p>
+					Checked rows are kept as-is. Unchecked rows are removed from the database and then
+					re-indexed from disk. This lets you rebuild only the series you care about and drop stray
+					entries that no longer exist.
+				</p>
+			</section>
+
+			<section class="panel">
+				<div class="toolbar">
+					<input id="search" class="search" type="search" placeholder="Filter by title, author, or path" />
+					<button id="keep-all" type="button">Keep All</button>
+					<button id="rebuild-all" type="button">Rebuild All</button>
+					<button id="run" class="primary" type="button">Run Selective Reindex</button>
+				</div>
+
+				<div class="summary">
+					<span id="counts">Loading...</span>
+					<span>Unchecked rows will be deleted and rescanned.</span>
+				</div>
+
+				<div class="table-wrap">
+					<table>
+						<thead>
+							<tr>
+								<th class="checkbox-cell">Keep</th>
+								<th>Series</th>
+								<th>Status</th>
+								<th>Chapters</th>
+								<th>Path</th>
+							</tr>
+						</thead>
+						<tbody id="rows">
+							<tr>
+								<td colspan="5" class="empty">Loading database entries...</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</section>
+
+			<section id="results" class="results">
+				<h2>Last Run</h2>
+				<pre id="results-text"></pre>
+			</section>
+
+			<dialog id="confirm-dialog">
+				<div class="dialog-body">
+					<h2>Confirm Selective Reindex</h2>
+					<p id="confirm-copy"></p>
+					<div class="dialog-preview">
+						<strong>Series that will be deleted and rebuilt</strong>
+						<ul id="confirm-list"></ul>
+					</div>
+				</div>
+				<div class="dialog-actions">
+					<button id="cancel-confirm" type="button">Cancel</button>
+					<button id="accept-confirm" class="primary" type="button">Confirm</button>
+				</div>
+			</dialog>
+		</main>
+
+		<script>
+			const searchInput = document.getElementById('search');
+			const rowsEl = document.getElementById('rows');
+			const countsEl = document.getElementById('counts');
+			const runButton = document.getElementById('run');
+			const resultsBox = document.getElementById('results');
+			const resultsText = document.getElementById('results-text');
+			const confirmDialog = document.getElementById('confirm-dialog');
+			const confirmCopy = document.getElementById('confirm-copy');
+			const confirmList = document.getElementById('confirm-list');
+			const cancelConfirm = document.getElementById('cancel-confirm');
+			const acceptConfirm = document.getElementById('accept-confirm');
+
+			let allSeries = [];
+
+			function render() {
+				const term = searchInput.value.trim().toLowerCase();
+				const filtered = allSeries.filter((series) => {
+					if (!term) return true;
+					return [series.title, series.author || '', series.path]
+						.join(' ')
+						.toLowerCase()
+						.includes(term);
+				});
+
+				if (!filtered.length) {
+					rowsEl.innerHTML = '<tr><td colspan="5" class="empty">No matching rows.</td></tr>';
+				} else {
+					rowsEl.innerHTML = filtered
+						.map(
+							(series) => `
+								<tr>
+									<td class="checkbox-cell">
+										<input
+											type="checkbox"
+											data-id="${series.id}"
+											${series.keep ? 'checked' : ''}
+										/>
+									</td>
+									<td>
+										<div class="title">${escapeHtml(series.title)}</div>
+										<div class="meta">${escapeHtml(series.author || 'Unknown')}</div>
+									</td>
+									<td><span class="status-pill">${escapeHtml(series.status || 'Unknown')}</span></td>
+									<td>${series.chapterCount}</td>
+									<td class="path">${escapeHtml(series.path)}</td>
+								</tr>
+							`
+						)
+						.join('');
+				}
+
+				rowsEl.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+					checkbox.addEventListener('change', () => {
+						const id = Number(checkbox.dataset.id);
+						const row = allSeries.find((series) => series.id === id);
+						if (row) row.keep = checkbox.checked;
+						updateCounts();
+					});
+				});
+
+				updateCounts();
+			}
+
+			function updateCounts() {
+				const keepCount = allSeries.filter((series) => series.keep).length;
+				const rebuildCount = allSeries.length - keepCount;
+				countsEl.textContent = `${keepCount} kept · ${rebuildCount} will rebuild · ${allSeries.length} total`;
+			}
+
+			function escapeHtml(value) {
+				return String(value)
+					.replaceAll('&', '&amp;')
+					.replaceAll('<', '&lt;')
+					.replaceAll('>', '&gt;')
+					.replaceAll('"', '&quot;')
+					.replaceAll("'", '&#39;');
+			}
+
+			async function loadSeries() {
+				const response = await fetch('/admin/selective-index/data');
+				if (!response.ok) {
+					throw new Error(`Failed to load manga list: ${response.status}`);
+				}
+
+				const data = await response.json();
+				allSeries = (data.series || []).map((series) => ({ ...series, keep: true }));
+				render();
+			}
+
+			async function runSelectiveIndex() {
+				runButton.disabled = true;
+				runButton.textContent = 'Running...';
+
+				try {
+					const keepSeriesIds = allSeries
+						.filter((series) => series.keep)
+						.map((series) => series.id);
+
+					const response = await fetch('/admin/selective-index/run', {
+						method: 'POST',
+						headers: { 'Content-Type': 'application/json' },
+						body: JSON.stringify({ keep_series_ids: keepSeriesIds })
+					});
+
+					const result = await response.json();
+					if (!response.ok) {
+						throw new Error(result.detail || `Request failed with ${response.status}`);
+					}
+
+					resultsBox.className = 'results visible ok';
+					resultsText.textContent = JSON.stringify(result, null, 2);
+					await loadSeries();
+				} catch (error) {
+					resultsBox.className = 'results visible error';
+					resultsText.textContent = String(error);
+				} finally {
+					runButton.disabled = false;
+					runButton.textContent = 'Run Selective Reindex';
+				}
+			}
+
+			function getRebuildTargets() {
+				return allSeries.filter((series) => !series.keep);
+			}
+
+			function openConfirmation() {
+				const rebuildTargets = getRebuildTargets();
+				if (!rebuildTargets.length) {
+					resultsBox.className = 'results visible ok';
+					resultsText.textContent = 'Nothing is unchecked. No series will be rebuilt.';
+					return;
+				}
+
+				const previewItems = rebuildTargets.slice(0, 8);
+				confirmCopy.textContent = `${rebuildTargets.length} series will be removed from the database and re-indexed from disk. Checked rows will be left alone.`;
+				confirmList.innerHTML = previewItems
+					.map((series) => `<li>${escapeHtml(series.title)}</li>`)
+					.join('');
+
+				if (rebuildTargets.length > previewItems.length) {
+					confirmList.innerHTML += `<li>...and ${rebuildTargets.length - previewItems.length} more</li>`;
+				}
+
+				confirmDialog.showModal();
+			}
+
+			document.getElementById('keep-all').addEventListener('click', () => {
+				allSeries.forEach((series) => (series.keep = true));
+				render();
+			});
+
+			document.getElementById('rebuild-all').addEventListener('click', () => {
+				allSeries.forEach((series) => (series.keep = false));
+				render();
+			});
+
+			searchInput.addEventListener('input', render);
+			runButton.addEventListener('click', openConfirmation);
+			cancelConfirm.addEventListener('click', () => confirmDialog.close());
+			acceptConfirm.addEventListener('click', async () => {
+				confirmDialog.close();
+				await runSelectiveIndex();
+			});
+			loadSeries().catch((error) => {
+				rowsEl.innerHTML = `<tr><td colspan="5" class="empty">${escapeHtml(String(error))}</td></tr>`;
+				countsEl.textContent = 'Failed to load data';
+			});
+		</script>
+	</body>
+</html>

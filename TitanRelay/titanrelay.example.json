@@ -1,0 +1,73 @@
+{
+  "projectName": "Relay",
+  "server": {
+    "host": "127.0.0.1",
+    "port": 8732
+  },
+  "copyparty": {
+    "baseUrl": "http://127.0.0.1:3923",
+    "password": ""
+  },
+  "mailboxes": {
+    "inboxRoot": "/device-handoff",
+    "dumpRoot": "/device-handoff-dump"
+  },
+  "devices": [
+    {
+      "id": "pit",
+      "slug": "pit",
+      "mailbox": "pit",
+      "name": "Relay Hub",
+      "shortName": "Pit",
+      "targetLabel": "Relay Hub",
+      "tagline": "The relay desk for the main pit inbox.",
+      "accentColor": "#d96666",
+      "accentColorStrong": "#ff9595",
+      "themeColor": "#d96666",
+      "capture": false,
+      "defaultTargetId": "laptop"
+    },
+    {
+      "id": "ipad",
+      "slug": "ipad",
+      "mailbox": "ipad",
+      "name": "iPad Relay",
+      "shortName": "iPad",
+      "targetLabel": "iPad",
+      "tagline": "Fast send and receive for the iPad inbox.",
+      "accentColor": "#4fa8ff",
+      "accentColorStrong": "#7ec4ff",
+      "themeColor": "#4fa8ff",
+      "capture": true,
+      "defaultTargetId": "pit"
+    },
+    {
+      "id": "s23",
+      "slug": "s23",
+      "mailbox": "s23",
+      "name": "Galaxy S23 Relay",
+      "shortName": "S23",
+      "targetLabel": "Galaxy S23",
+      "tagline": "Quick capture and send for the Galaxy S23 inbox.",
+      "accentColor": "#54d48d",
+      "accentColorStrong": "#7be8aa",
+      "themeColor": "#54d48d",
+      "capture": true,
+      "defaultTargetId": "pit"
+    },
+    {
+      "id": "laptop",
+      "slug": "laptop",
+      "mailbox": "laptop",
+      "name": "Laptop Relay",
+      "shortName": "Laptop",
+      "targetLabel": "Laptop",
+      "tagline": "Bulk handoff and receive flow for the laptop inbox.",
+      "accentColor": "#f0b55a",
+      "accentColorStrong": "#ffd18a",
+      "themeColor": "#f0b55a",
+      "capture": false,
+      "defaultTargetId": "pit"
+    }
+  ]
+}

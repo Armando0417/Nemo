@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+		<meta name="theme-color" content="#5bb0ff" />
+		<title>Relay</title>
+		<link rel="icon" type="image/png" href="/relay/assets/titan_relay.png" />
+		<link rel="stylesheet" href="/relay/assets/app.css" />
+		<script defer src="/relay/assets/home.js"></script>
+	</head>
+	<body class="home-shell">
+		<main class="app-shell">
+			<section class="hero hero-home">
+				<div class="hero-copy">
+					<div class="eyebrow">Nemo Relay</div>
+					<h1>Relay</h1>
+					<p>Copyparty-backed inboxes for pit, iPad, S23, and laptop handoff. Pick a mailbox and step into its relay page.</p>
+				</div>
+				<div class="top-status" id="home-status" data-ready="false">
+					<span class="top-status-dot"></span>
+					<span>Loading device roster...</span>
+				</div>
+			</section>
+
+			<section class="card">
+				<div class="section-heading">
+					<h2>Mailboxes</h2>
+					<p>Each page can send payload folders into other inboxes and archive its own downloads into the matching dump path.</p>
+				</div>
+				<div class="device-grid" id="device-grid"></div>
+			</section>
+		</main>
+	</body>
+</html>

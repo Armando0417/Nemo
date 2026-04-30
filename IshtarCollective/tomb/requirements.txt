@@ -1,0 +1,14 @@
+# Web Framework and Server
+fastapi[standard]           # Core framework + Uvicorn server
+
+# Database
+sqlalchemy                  # Core ORM
+# aiosqlite                 # Optional: add this if you want full async SQLite support
+
+# Authentication and Security
+python-jose[cryptography]   # For JWT token handling 
+passlib[bcrypt]             # For password hashing
+python-multipart            # Required for handling OAuth2 login forms
+
+# Utilities
+# zipfile                   # Built-in to Python; no need to list in requirements

@@ -1,0 +1,90 @@
+# Nemo URL Reference
+
+Replace `<server-ip>` with the machine hosting Nemo.
+
+Base:
+- `http://<server-ip>:8000/`
+
+Frontend Sections:
+- Codex: `http://<server-ip>:8000/codex`
+- Ishtar: `http://<server-ip>:8000/ishtar`
+- Relay: `http://<server-ip>:8000/relay`
+
+Section API Roots:
+- Codex API: `http://<server-ip>:8000/api/codex`
+- Ishtar API: `http://<server-ip>:8000/api/ishtar`
+- Relay API: `http://<server-ip>:8000/api/relay`
+- Gates API: `http://<server-ip>:8000/api/gates`
+- Startup Services API: `http://<server-ip>:8000/api/startup-services`
+- Priestess API: `http://<server-ip>:8000/api/priestess`
+
+Gate Catalog:
+- All Jellyfin gates status: `http://<server-ip>:8000/api/gates`
+- All Jellyfin gates metadata: `http://<server-ip>:8000/api/gates/meta/catalog`
+
+Startup Services:
+- All startup service status: `http://<server-ip>:8000/api/startup-services`
+- Startup service metadata: `http://<server-ip>:8000/api/startup-services/meta/catalog`
+
+Tailscale:
+- Check: `http://<server-ip>:8000/api/startup-services/tailscale/check`
+- Start: `http://<server-ip>:8000/api/startup-services/tailscale/start`
+- Stop managed process: `http://<server-ip>:8000/api/startup-services/tailscale/stop`
+
+AdGuard:
+- Check: `http://<server-ip>:8000/api/startup-services/adguard/check`
+- Start: `http://<server-ip>:8000/api/startup-services/adguard/start`
+- Stop managed process: `http://<server-ip>:8000/api/startup-services/adguard/stop`
+
+Startup Service Environment:
+- `TAILSCALE_EXE`: defaults to `C:\Program Files\Tailscale\tailscale-ipn.exe`
+- `TAILSCALE_COMMAND`: overrides the Tailscale command entirely.
+- `NEMO_AUTOSTART_TAILSCALE`: defaults to `1`.
+- `TAILSCALE_VISIBLE_CONSOLE`: defaults to `0`.
+- `ADGUARD_EXE`: defaults to `C:\Program Files\AdGuardHome\AdGuardHome.exe`
+- `ADGUARD_COMMAND`: overrides the AdGuard command entirely.
+- `ADGUARD_CWD`: working directory for AdGuard.
+- `NEMO_AUTOSTART_ADGUARD`: defaults to `1`.
+- `ADGUARD_VISIBLE_CONSOLE`: defaults to `1`, so AdGuard opens with a terminal window.
+
+Priestess Alerts:
+- Status: `http://<server-ip>:8000/api/priestess/status`
+- Test Discord alert: `POST http://<server-ip>:8000/api/priestess/test`
+
+Priestess Environment:
+- `PRIESTESS_SERVICE_NAME`: display name, defaults to `Priestess`.
+- `PRIESTESS_ENABLED`: defaults to `1`.
+- `PRIESTESS_DISCORD_WEBHOOK_URL`: Discord webhook URL for the alert channel.
+- `PRIESTESS_DISCORD_USERNAME`: webhook username, defaults to the service name.
+- `PRIESTESS_DISCORD_MENTION`: optional Discord mention for push alerts, e.g. `<@&ROLE_ID>`.
+- `PRIESTESS_RELAY_ALERTS_ENABLED`: defaults to `1`.
+
+Jellyfin Gates:
+
+Akashic:
+- Check: `http://<server-ip>:8000/api/gates/akashic/check`
+- Start: `http://<server-ip>:8000/api/gates/akashic/start`
+- Stop: `http://<server-ip>:8000/api/gates/akashic/stop`
+- Open: `http://<server-ip>:8000/api/gates/akashic/open`
+- Private Loader: `http://<server-ip>:8000/private/gates/akashic/loader`
+
+H-TV:
+- Check: `http://<server-ip>:8000/api/gates/htv/check`
+- Start: `http://<server-ip>:8000/api/gates/htv/start`
+- Stop: `http://<server-ip>:8000/api/gates/htv/stop`
+- Open: `http://<server-ip>:8000/api/gates/htv/open`
+- Private Loader: `http://<server-ip>:8000/private/gates/htv/loader`
+
+Voyager:
+- Check: `http://<server-ip>:8000/api/gates/voyager/check`
+- Start: `http://<server-ip>:8000/api/gates/voyager/start`
+- Stop: `http://<server-ip>:8000/api/gates/voyager/stop`
+- Open: `http://<server-ip>:8000/api/gates/voyager/open`
+- Private Loader: `http://<server-ip>:8000/private/gates/voyager/loader`
+
+Notes:
+- `start` spins up the Jellyfin gate under Nemo management.
+- `stop` shuts it down.
+- `check` returns current status.
+- `open` now targets Nemo's private gate loader route after ensuring the gate is available.
+- `private/gates/.../loader` serves the loader page directly and then redirects to the actual gate when ready.

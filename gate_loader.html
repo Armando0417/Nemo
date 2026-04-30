@@ -1,0 +1,659 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gate Loading...</title>
+    <style>
+      @import url("https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Share+Tech+Mono&display=swap");
+
+      *,
+      *::before,
+      *::after {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      :root {
+        --bg-primary: #0d0d0f;
+        --bg-secondary: #141418;
+        --bg-tertiary: #1a1a20;
+        --accent: #faee3a;
+        --accent-dim: #faee3a44;
+        --accent-glow: #faee3a22;
+        --text-primary: #e8e6e0;
+        --text-secondary: #8a8880;
+        --text-dim: #4a4840;
+        --danger: #ff4444;
+        --border: #2a2a30;
+      }
+
+      body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: "Rajdhani", sans-serif;
+        height: 100vh;
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      /* -- BACKGROUND GRID ---------------------------------------- */
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(var(--border) 1px, transparent 1px),
+          linear-gradient(90deg, var(--border) 1px, transparent 1px);
+        background-size: 60px 60px;
+        opacity: 0.15;
+        z-index: 0;
+      }
+
+      /* -- SCAN LINE ---------------------------------------------- */
+      body::after {
+        content: "";
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--accent),
+          transparent
+        );
+        opacity: 0.6;
+        animation: scanline 3s linear infinite;
+        z-index: 1;
+      }
+
+      @keyframes scanline {
+        0% {
+          top: -2px;
+        }
+        100% {
+          top: 100vh;
+        }
+      }
+
+      /* -- MAIN CONTAINER ----------------------------------------- */
+      .gate-container {
+        position: relative;
+        z-index: 5;
+        width: 520px;
+        max-width: 90vw;
+      }
+
+      /* -- HEADER BLOCK ------------------------------------------- */
+      .gate-header {
+        border: 1px solid var(--border);
+        border-bottom: none;
+        padding: 24px 28px 16px;
+        background: var(--bg-secondary);
+        clip-path: polygon(
+          0 0,
+          calc(100% - 24px) 0,
+          100% 24px,
+          100% 100%,
+          0 100%
+        );
+        position: relative;
+      }
+
+      .gate-header::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background: var(--accent);
+      }
+
+      .gate-classification {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        letter-spacing: 4px;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        margin-bottom: 8px;
+      }
+
+      .gate-name {
+        font-size: 32px;
+        font-weight: 700;
+        letter-spacing: 6px;
+        text-transform: uppercase;
+        color: var(--text-primary);
+        line-height: 1;
+      }
+
+      .gate-subtitle {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 11px;
+        color: var(--text-dim);
+        margin-top: 6px;
+        letter-spacing: 2px;
+      }
+
+      /* -- STATUS PANEL ------------------------------------------- */
+      .status-panel {
+        border: 1px solid var(--border);
+        background: var(--bg-secondary);
+        padding: 28px;
+        position: relative;
+      }
+
+      .status-panel::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        width: 24px;
+        height: 24px;
+        border-left: 1px solid var(--border);
+        border-top: 1px solid var(--border);
+        background: var(--bg-primary);
+        clip-path: polygon(100% 0, 100% 100%, 0 100%);
+      }
+
+      /* -- PROGRESS BAR ------------------------------------------- */
+      .progress-track {
+        width: 100%;
+        height: 3px;
+        background: var(--bg-primary);
+        margin-bottom: 24px;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: var(--accent);
+        width: 0%;
+        transition: width 0.8s cubic-bezier(0.22, 1, 0.36, 1);
+        position: relative;
+      }
+
+      .progress-fill::after {
+        content: "";
+        position: absolute;
+        right: 0;
+        top: -3px;
+        width: 1px;
+        height: 9px;
+        background: var(--accent);
+        box-shadow: 0 0 8px var(--accent);
+      }
+
+      .progress-glow {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 30%;
+        background: linear-gradient(
+          90deg,
+          transparent,
+          var(--accent-dim),
+          transparent
+        );
+        animation: progressSweep 2s ease-in-out infinite;
+      }
+
+      @keyframes progressSweep {
+        0% {
+          transform: translateX(-100%);
+        }
+        100% {
+          transform: translateX(400%);
+        }
+      }
+
+      /* -- STATUS LINES ------------------------------------------- */
+      .status-lines {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        margin-bottom: 24px;
+      }
+
+      .status-line {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-family: "Share Tech Mono", monospace;
+        font-size: 12px;
+        opacity: 0;
+        transform: translateX(-8px);
+        transition: all 0.4s ease;
+      }
+
+      .status-line.visible {
+        opacity: 1;
+        transform: translateX(0);
+      }
+
+      .status-line.active {
+        color: var(--accent);
+      }
+
+      .status-line.done {
+        color: var(--text-secondary);
+      }
+
+      .status-line.failed {
+        color: var(--danger);
+      }
+
+      .status-indicator {
+        width: 6px;
+        height: 6px;
+        flex-shrink: 0;
+        clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
+      }
+
+      .status-line.active .status-indicator {
+        background: var(--accent);
+        animation: pulse 1s ease-in-out infinite;
+      }
+
+      .status-line.done .status-indicator {
+        background: var(--text-secondary);
+      }
+
+      .status-line.failed .status-indicator {
+        background: var(--danger);
+      }
+
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.3;
+        }
+      }
+
+      /* -- ATTEMPT COUNTER ---------------------------------------- */
+      .attempt-counter {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-top: 16px;
+        border-top: 1px solid var(--border);
+      }
+
+      .attempt-label {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 11px;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+        text-transform: uppercase;
+      }
+
+      .attempt-value {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 13px;
+        color: var(--accent);
+      }
+
+      /* -- FOOTER ------------------------------------------------- */
+      .gate-footer {
+        border: 1px solid var(--border);
+        border-top: none;
+        padding: 12px 28px;
+        background: var(--bg-tertiary);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        clip-path: polygon(
+          0 0,
+          100% 0,
+          100% calc(100% - 16px),
+          calc(100% - 16px) 100%,
+          0 100%
+        );
+      }
+
+      .footer-status {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text-dim);
+        letter-spacing: 3px;
+        text-transform: uppercase;
+      }
+
+      .footer-status.online {
+        color: var(--accent);
+      }
+
+      .footer-time {
+        font-family: "Share Tech Mono", monospace;
+        font-size: 10px;
+        color: var(--text-dim);
+      }
+
+      /* -- CORNER DECORATIONS ------------------------------------- */
+      .corner-tl,
+      .corner-br {
+        position: fixed;
+        width: 40px;
+        height: 40px;
+        z-index: 2;
+      }
+
+      .corner-tl {
+        top: 20px;
+        left: 20px;
+        border-top: 1px solid var(--accent-dim);
+        border-left: 1px solid var(--accent-dim);
+      }
+
+      .corner-br {
+        bottom: 20px;
+        right: 20px;
+        border-bottom: 1px solid var(--accent-dim);
+        border-right: 1px solid var(--accent-dim);
+      }
+
+      /* -- READY STATE -------------------------------------------- */
+      .gate-container.ready .gate-header::before {
+        background: var(--accent);
+        box-shadow: 0 0 12px var(--accent-dim);
+      }
+
+      .gate-container.ready .gate-name {
+        color: var(--accent);
+        text-shadow: 0 0 20px var(--accent-glow);
+      }
+
+      .gate-container.ready .progress-fill {
+        width: 100% !important;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="corner-tl"></div>
+    <div class="corner-br"></div>
+
+    <div class="gate-container" id="gateContainer">
+      <div class="gate-header">
+        <div class="gate-classification" id="gateClassification">
+          RESTRICTED ACCESS
+        </div>
+        <div class="gate-name" id="gateName">GATE</div>
+        <div class="gate-subtitle" id="gateSubtitle">INITIALIZING SYSTEMS</div>
+      </div>
+
+      <div class="status-panel">
+        <div class="progress-track">
+          <div class="progress-fill" id="progressFill"></div>
+          <div class="progress-glow"></div>
+        </div>
+
+        <div class="status-lines" id="statusLines">
+          <!-- Status lines injected by JS -->
+        </div>
+
+        <div class="attempt-counter">
+          <span class="attempt-label">Connection Attempts</span>
+          <span class="attempt-value" id="attemptCount">0 / 30</span>
+        </div>
+      </div>
+
+      <div class="gate-footer">
+        <span class="footer-status" id="footerStatus"
+          >ESTABLISHING CONNECTION</span
+        >
+        <span class="footer-time" id="footerTime"></span>
+      </div>
+    </div>
+
+    <script>
+      // ── CONFIGURATION ──────────────────────────────────────────
+      // These are set by URL parameters:
+      //   ?name=DEEP+ARCHIVES&port=1201&subtitle=The+Sealed+Vaults+Below
+      //
+      // Or hardcode them below for a specific Gate.
+
+      const injected = window.__NEMO_GATE_CONFIG__ || {};
+      const params = new URLSearchParams(window.location.search);
+
+      const CONFIG = {
+        name: injected.name || params.get("name") || "GATE",
+        port: String(injected.port || params.get("port") || "8096"),
+        subtitle:
+          injected.subtitle ||
+          params.get("subtitle") ||
+          "INITIALIZING SYSTEMS",
+        classification:
+          injected.classification ||
+          params.get("class") ||
+          "RESTRICTED ACCESS",
+        host:
+          injected.host ||
+          params.get("host") ||
+          window.location.hostname ||
+          "localhost",
+        scheme:
+          injected.scheme ||
+          params.get("scheme") ||
+          "http",
+        maxAttempts: Number(
+          injected.maxAttempts || params.get("maxAttempts") || 30,
+        ),
+        pollInterval: Number(
+          injected.pollInterval || params.get("pollInterval") || 3000,
+        ),
+        redirectDelayMs: Number(
+          injected.redirectDelayMs || params.get("redirectDelayMs") || 7000,
+        ),
+      };
+
+      const targetUrl = `${CONFIG.scheme}://${CONFIG.host}:${CONFIG.port}`;
+
+      // ── INIT UI ────────────────────────────────────────────────
+      document.getElementById("gateName").textContent = CONFIG.name;
+      document.getElementById("gateSubtitle").textContent = CONFIG.subtitle;
+      document.getElementById("gateClassification").textContent =
+        CONFIG.classification;
+      document.title = `${CONFIG.name} — Loading...`;
+
+      const statusContainer = document.getElementById("statusLines");
+      const progressFill = document.getElementById("progressFill");
+      const attemptDisplay = document.getElementById("attemptCount");
+      const footerStatus = document.getElementById("footerStatus");
+      const footerTime = document.getElementById("footerTime");
+      const gateContainer = document.getElementById("gateContainer");
+
+      // ── STATUS MESSAGES ────────────────────────────────────────
+      const bootSequence = [
+        "Resolving gate address...",
+        `Targeting port ${CONFIG.port}...`,
+        "Authenticating access keys...",
+        "Loading gate manifest...",
+        "Synchronizing data vaults...",
+        "Verifying archive integrity...",
+        "Establishing media pipeline...",
+        "Initializing stream buffers...",
+        "Mounting storage volumes...",
+        "Calibrating playback engine...",
+      ];
+
+      let currentStep = 0;
+      let attempts = 0;
+      let serverReady = false;
+      let redirectCountdownTimer = null;
+
+      function addStatusLine(text, state = "active") {
+        const line = document.createElement("div");
+        line.className = `status-line ${state}`;
+        line.innerHTML = `<span class="status-indicator"></span><span>${text}</span>`;
+        statusContainer.appendChild(line);
+
+        // Trigger animation
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            line.classList.add("visible");
+          });
+        });
+
+        return line;
+      }
+
+      function updateProgress(percent) {
+        progressFill.style.width = `${percent}%`;
+      }
+
+      function updateTime() {
+        const now = new Date();
+        const h = String(now.getHours()).padStart(2, "0");
+        const m = String(now.getMinutes()).padStart(2, "0");
+        const s = String(now.getSeconds()).padStart(2, "0");
+        footerTime.textContent = `${h}:${m}:${s}`;
+      }
+
+      setInterval(updateTime, 1000);
+      updateTime();
+
+      // ── BOOT SEQUENCE ──────────────────────────────────────────
+      function runBootStep() {
+        if (currentStep > 0 && currentStep <= bootSequence.length) {
+          const prevLines = statusContainer.querySelectorAll(
+            ".status-line.active",
+          );
+          prevLines.forEach((l) => {
+            l.classList.remove("active");
+            l.classList.add("done");
+          });
+        }
+
+        if (currentStep < bootSequence.length) {
+          addStatusLine(bootSequence[currentStep], "active");
+          currentStep++;
+          updateProgress((currentStep / bootSequence.length) * 70);
+        }
+      }
+
+      // Run boot steps with staggered timing
+      let bootTimer = 0;
+      for (let i = 0; i < bootSequence.length; i++) {
+        bootTimer += 600 + Math.random() * 800;
+        setTimeout(runBootStep, bootTimer);
+      }
+
+      // ── SERVER POLLING ─────────────────────────────────────────
+      // Start polling after boot sequence finishes
+      const pollDelay = bootTimer + 1500;
+
+      setTimeout(() => {
+        // Mark all boot steps as done
+        const activeLines = statusContainer.querySelectorAll(
+          ".status-line.active",
+        );
+        activeLines.forEach((l) => {
+          l.classList.remove("active");
+          l.classList.add("done");
+        });
+
+        addStatusLine("Polling gate endpoint...", "active");
+        updateProgress(75);
+        pollServer();
+      }, pollDelay);
+
+      function pollServer() {
+        if (serverReady) return;
+
+        attempts++;
+        attemptDisplay.textContent = `${attempts} / ${CONFIG.maxAttempts}`;
+        updateProgress(75 + (attempts / CONFIG.maxAttempts) * 20);
+
+        fetch(targetUrl, { mode: "no-cors", cache: "no-store" })
+          .then(() => {
+            onServerReady();
+          })
+          .catch(() => {
+            if (attempts >= CONFIG.maxAttempts) {
+              onServerFailed();
+            } else {
+              setTimeout(pollServer, CONFIG.pollInterval);
+            }
+          });
+      }
+
+      function onServerReady() {
+        serverReady = true;
+
+        const activeLines = statusContainer.querySelectorAll(
+          ".status-line.active",
+        );
+        activeLines.forEach((l) => {
+          l.classList.remove("active");
+          l.classList.add("done");
+        });
+
+        addStatusLine("Gate connection established.", "active");
+        updateProgress(100);
+
+        gateContainer.classList.add("ready");
+        footerStatus.textContent = "ONLINE";
+        footerStatus.classList.add("online");
+        document.title = `${CONFIG.name} — ONLINE`;
+
+        const redirectDelaySeconds = Math.ceil(CONFIG.redirectDelayMs / 1000);
+
+        setTimeout(() => {
+          addStatusLine(
+            `Gate handshake complete. Holding ${redirectDelaySeconds}s for final warmup...`,
+            "done",
+          );
+        }, 800);
+
+        setTimeout(() => {
+          let secondsRemaining = redirectDelaySeconds;
+          footerStatus.textContent = `ONLINE // REDIRECT IN ${secondsRemaining}S`;
+
+          redirectCountdownTimer = setInterval(() => {
+            secondsRemaining -= 1;
+
+            if (secondsRemaining <= 0) {
+              clearInterval(redirectCountdownTimer);
+              redirectCountdownTimer = null;
+              footerStatus.textContent = "ONLINE // REDIRECTING";
+              addStatusLine(
+                "Warmup buffer complete. Redirecting to gate...",
+                "done",
+              );
+              window.location.href = targetUrl;
+              return;
+            }
+
+            footerStatus.textContent = `ONLINE // REDIRECT IN ${secondsRemaining}S`;
+          }, 1000);
+        }, 1200);
+      }
+
+      function onServerFailed() {
+        const activeLines = statusContainer.querySelectorAll(
+          ".status-line.active",
+        );
+        activeLines.forEach((l) => {
+          l.classList.remove("active");
+          l.classList.add("failed");
+        });
+
+        addStatusLine("Gate unreachable. Retry manually.", "failed");
+        footerStatus.textContent = "CONNECTION FAILED";
+        document.title = `${CONFIG.name} — OFFLINE`;
+      }
+    </script>
+  </body>
+</html>
