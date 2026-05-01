@@ -20,10 +20,6 @@ env/
 !.env.*.example
 discord_api.py
 
-# Nemo generated frontend output
-codex_frontend_dist/
-ishtar_frontend_dist/
-
 # Node/Svelte generated files
 node_modules/
 .svelte-kit/
@@ -32,11 +28,23 @@ dist/
 .vite/
 coverage/
 
+# Nested repository metadata backups
+.git-nested-backup/
+*.git-backup/
+
 # Relay runtime, storage, and live config
 .relay-appdata/
 TitanRelay/relay_runtime/
 TitanRelay/device-handoff/
 TitanRelay/titanrelay.json
+
+# Local databases and generated data that can contain machine-specific state
+CodexVault/CodexVaultIndexer/vault_cache/
+CodexVault/CodexVaultIndexer/*.db-shm
+CodexVault/CodexVaultIndexer/*.db-wal
+
+# Compiled binaries / external services
+*.exe
 
 # OS/editor
 .DS_Store

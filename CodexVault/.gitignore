@@ -1,0 +1,45 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+
+# Git / temp
+*.log
+*.tmp
+*.swp
+
+# Frontend: Svelte / Vite / Node
+CodexVault/node_modules/
+CodexVault/.svelte-kit/
+CodexVault/build/
+CodexVault/.output/
+CodexVault/.vercel/
+CodexVault/.netlify/
+CodexVault/.wrangler/
+CodexVault/vite.config.js.timestamp-*
+CodexVault/vite.config.ts.timestamp-*
+
+# Frontend local env / data
+CodexVault/.env
+CodexVault/.env.*
+!CodexVault/.env.example
+!CodexVault/.env.test
+CodexVault/local.db
+
+# Backend: Python
+CodexVaultIndexer/venv/
+CodexVaultIndexer/__pycache__/
+CodexVaultIndexer/*.py[cod]
+CodexVaultIndexer/.pytest_cache/
+CodexVaultIndexer/.mypy_cache/
+
+# Backend local env / data
+CodexVaultIndexer/.env
+CodexVaultIndexer/.env.*
+!CodexVaultIndexer/.env.example
+CodexVaultIndexer/*.db
+CodexVaultIndexer/vault_cache/
+
+# Generic archives / backups
+*.bak
+*.old
