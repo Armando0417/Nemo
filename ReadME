@@ -9,6 +9,9 @@ Frontend Sections:
 - Codex: `http://<server-ip>:8000/codex`
 - Ishtar: `http://<server-ip>:8000/ishtar`
 - Relay: `http://<server-ip>:8000/relay`
+- Akashic proxy: `http://<server-ip>:8000/akashic`
+- H-TV proxy: `http://<server-ip>:8000/htv`
+- Voyager proxy: `http://<server-ip>:8000/voyager`
 
 Section API Roots:
 - Codex API: `http://<server-ip>:8000/api/codex`
@@ -17,6 +20,7 @@ Section API Roots:
 - Gates API: `http://<server-ip>:8000/api/gates`
 - Startup Services API: `http://<server-ip>:8000/api/startup-services`
 - Priestess API: `http://<server-ip>:8000/api/priestess`
+- DNS API: `http://<server-ip>:8000/api/dns`
 
 Gate Catalog:
 - All Jellyfin gates status: `http://<server-ip>:8000/api/gates`
@@ -35,6 +39,15 @@ AdGuard:
 - Check: `http://<server-ip>:8000/api/startup-services/adguard/check`
 - Start: `http://<server-ip>:8000/api/startup-services/adguard/start`
 - Stop managed process: `http://<server-ip>:8000/api/startup-services/adguard/stop`
+- Auto-start now defaults to off; Nemo's built-in DNS resolver replaces AdGuard for `chaldeas.home`.
+
+Nemo DNS:
+- Status: `http://<server-ip>:8000/api/dns`
+- `NEMO_DNS_ENABLED`: defaults to `true`.
+- `NEMO_DNS_HOSTNAME`: defaults to `chaldeas.home`.
+- `NEMO_DNS_RESOLVE_IP`: set this to Armando-GP's Tailscale IP, e.g. `100.111.90.10`.
+- `NEMO_DNS_UPSTREAM`: defaults to `1.1.1.1`.
+- `NEMO_DNS_PORT`: defaults to UDP `53`; Windows usually requires Administrator.
 
 Startup Service Environment:
 - `TAILSCALE_EXE`: defaults to `C:\Program Files\Tailscale\tailscale-ipn.exe`
@@ -88,3 +101,5 @@ Notes:
 - `check` returns current status.
 - `open` now targets Nemo's private gate loader route after ensuring the gate is available.
 - `private/gates/.../loader` serves the loader page directly and then redirects to the actual gate when ready.
+- For path-based proxying, set Jellyfin Dashboard -> Settings -> Networking -> Base URL to `/akashic`, `/htv`, and `/voyager` respectively.
+- For `chaldeas.home`, configure Tailscale Split DNS to point that hostname at Nemo's Tailscale IP and remove AdGuard as a global DNS override.

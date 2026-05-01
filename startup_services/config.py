@@ -91,7 +91,7 @@ def _adguard_config() -> StartupServiceConfig:
             if name.strip()
         ),
         visible_console=_env_flag("ADGUARD_VISIBLE_CONSOLE", True),
-        auto_start=_env_flag("NEMO_AUTOSTART_ADGUARD", True),
+        auto_start=_env_flag("NEMO_AUTOSTART_ADGUARD", False),
         stop_managed_on_shutdown=_env_flag("NEMO_STOP_ADGUARD_ON_SHUTDOWN", False),
     )
 

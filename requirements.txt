@@ -1,4 +1,6 @@
 fastapi[standard]
+httpx
+websockets
 sqlmodel
 sqlalchemy
 Pillow

@@ -29,15 +29,21 @@ venv\Scripts\python.exe -m pip install -r requirements.txt
 Start Nemo:
 
 ```powershell
-venv\Scripts\python.exe -m uvicorn server:app --host 0.0.0.0 --port 8000
+venv\Scripts\python.exe server.py
 ```
+
+`server.py` defaults to port `80` through `NEMO_PORT`. On Windows, port 80 requires an Administrator terminal. If needed, use `NEMO_PORT=8080`.
 
 Main URLs:
 - `http://<server-ip>:8000/codex`
 - `http://<server-ip>:8000/ishtar`
 - `http://<server-ip>:8000/relay`
+- `http://<server-ip>:8000/akashic`
+- `http://<server-ip>:8000/htv`
+- `http://<server-ip>:8000/voyager`
 - `http://<server-ip>:8000/api/gates`
 - `http://<server-ip>:8000/api/priestess`
+- `http://<server-ip>:8000/api/dns`
 
 See `ReadME` for the full local URL reference.
 
@@ -52,6 +58,11 @@ Copy-Item priestess\priestess.env.example priestess\priestess.env
 ```
 
 Set external library paths with environment variables when needed:
+- `NEMO_PORT`: HTTP port, defaults to `80` when running `python server.py`.
+- `NEMO_DNS_ENABLED`: starts Nemo's built-in DNS resolver, defaults to `true`.
+- `NEMO_DNS_HOSTNAME`: defaults to `chaldeas.home`.
+- `NEMO_DNS_RESOLVE_IP`: IP returned for `chaldeas.home`, e.g. your Tailscale IP.
+- `NEMO_DNS_UPSTREAM`: upstream resolver for all other names, defaults to `1.1.1.1`.
 - `CODEX_VAULT_LIBRARY_PATH`
 - `TOMB_SOURCE_ROOT`
 - `AKASHIC_JELLYFIN_EXE`, `AKASHIC_JELLYFIN_DATA`, `AKASHIC_JELLYFIN_CACHE`, `AKASHIC_JELLYFIN_LOGS`
@@ -61,3 +72,18 @@ Set external library paths with environment variables when needed:
 ## Archive Notes
 
 This repository is meant to preserve the runnable Nemo application code and custom gate apps, not the homelab media payloads. A fresh clone can run the server after dependencies and local env files are recreated, but Codex/Ishtar/Jellyfin content still depends on your external library paths.
+
+## chaldeas.home Setup
+
+Configure each Jellyfin instance once:
+- Akashic Records: Dashboard -> Settings -> Networking -> Base URL = `/akashic`
+- H-TV: Dashboard -> Settings -> Networking -> Base URL = `/htv`
+- Voyager Records: Dashboard -> Settings -> Networking -> Base URL = `/voyager`
+
+Configure Tailscale Split DNS:
+- Tailscale admin console -> DNS settings.
+- Remove AdGuard as the global DNS override.
+- Add Split DNS for `chaldeas.home` pointing to Armando-GP's Tailscale IP, for example `100.111.90.10`.
+- Set `NEMO_DNS_RESOLVE_IP=100.111.90.10` before starting Nemo.
+
+Nemo's DNS resolver is intentionally tiny: it answers only `chaldeas.home` and forwards every other DNS query to `NEMO_DNS_UPSTREAM`.
