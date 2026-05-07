@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from http import HTTPStatus
 import json
+import logging
 import mimetypes
 import os
 from pathlib import Path
@@ -18,6 +19,7 @@ from relay.config import RelaySettings
 
 CHUNK_SIZE = 1024 * 256
 RELAY_ROUTE_PREFIX = "/relay"
+logger = logging.getLogger("nemo.relay")
 
 
 def normalize_cp_path(path: str) -> str:
@@ -526,6 +528,12 @@ class RelayService:
             raise RuntimeError(f"Listing failed with HTTP {response.status}.")
 
         payload = json.loads(response.body.decode("utf-8"))
+        logger.info(
+            "Relay inbox listed for %s: %s dirs, %s files.",
+            device["id"],
+            len(payload.get("dirs", [])),
+            len(payload.get("files", [])),
+        )
         return {
             "dirs": payload.get("dirs", []),
             "files": payload.get("files", []),
@@ -536,6 +544,12 @@ class RelayService:
     def send_payload(self, device_id: str, target_id: str, relative_paths: list[str], files: list[Any]) -> dict[str, Any]:
         device = self.config.require_device(urllib_parse.unquote(device_id))
         target = self.config.require_device(target_id)
+        logger.info(
+            "Relay send requested: source=%s target=%s items=%s.",
+            device["id"],
+            target["id"],
+            len(files),
+        )
         if target["id"] == self.config.hub_device_id:
             raise ValueError("Relay Hub is reserved for downloaded handoff storage and cannot be selected as a send destination.")
         if not files:
@@ -578,6 +592,14 @@ class RelayService:
                 continue
             failures.append(f"{relative_path}: HTTP {response.status}")
 
+        logger.info(
+            "Relay payload %s sent: source=%s target=%s uploaded=%s failed=%s.",
+            payload_name,
+            device["id"],
+            target["id"],
+            success_count,
+            len(failures),
+        )
         return {
             "payloadName": payload_name,
             "sourceDeviceId": device["id"],
@@ -599,6 +621,13 @@ class RelayService:
         source_path = join_cp_paths(device["inboxPath"], entry_name)
         archive_device = self.config.hub_device
         archive_root = archive_device["dumpPath"]
+        logger.info(
+            "Relay archive requested: source=%s entry=%s kind=%s archive=%s.",
+            device["id"],
+            entry_name,
+            kind,
+            archive_device["id"],
+        )
         self.config.copyparty.ensure_folder(archive_root)
         destination_name = entry_name
         destination_path = join_cp_paths(archive_root, destination_name)
@@ -630,6 +659,13 @@ class RelayService:
 
         download_name = f"{download_entry_name}.zip" if download_kind == "payload" else download_entry_name
         encoded_name = urllib_parse.quote(download_entry_name, safe="")
+        logger.info(
+            "Relay archived %s from %s to %s via %s.",
+            entry_name,
+            device["id"],
+            destination_path,
+            archive_action,
+        )
         return {
             "downloadUrl": (
                 f"/api/relay/device/{archive_device['id']}/download/{encoded_name}"
@@ -651,6 +687,13 @@ class RelayService:
     def prepare_download(self, device_id: str, entry_name: str, kind: str, storage: str = "dump") -> DownloadHandle:
         device = self.config.require_device(urllib_parse.unquote(device_id))
         normalized_name = leaf_name(urllib_parse.unquote(entry_name))
+        logger.info(
+            "Relay download requested: device=%s entry=%s kind=%s storage=%s.",
+            device["id"],
+            normalized_name,
+            kind,
+            storage,
+        )
         if kind not in {"file", "payload"}:
             raise ValueError("Invalid download kind.")
         if storage not in {"dump", "inbox"}:
@@ -666,15 +709,18 @@ class RelayService:
 
         file_name = f"{normalized_name}.zip" if kind == "payload" else normalized_name
         content_type = response.headers.get_content_type()
+        logger.info("Relay download prepared: device=%s file=%s.", device["id"], file_name)
         return DownloadHandle(stream=response, content_type=content_type, file_name=file_name)
 
     def initialize_mailboxes(self) -> dict[str, Any]:
+        logger.info("Relay mailbox initialization started.")
         self.config.copyparty.ensure_folder(self.config.inbox_root)
         self.config.copyparty.ensure_folder(self.config.dump_root)
         for device in self.config.devices:
             self.config.copyparty.ensure_folder(device["inboxPath"])
             self.config.copyparty.ensure_folder(device["dumpPath"])
 
+        logger.info("Relay mailbox initialization complete for %s devices.", len(self.config.devices))
         return {
             "status": "ok",
             "inboxRoot": self.config.inbox_root,

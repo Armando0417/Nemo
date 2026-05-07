@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import logging
 import os
 import re
 from pathlib import Path
@@ -11,6 +12,8 @@ import time
 import zipfile
 
 from PIL import Image
+
+logger = logging.getLogger("nemo.codex.reader")
 
 
 def natural_sort_key(value: str):
@@ -103,14 +106,23 @@ class VaultReader:
             return None
 
         try:
+            started_at = time.perf_counter()
             with zipfile.ZipFile(cbz_path, "r") as archive:
                 with archive.open(page_name, "r") as source:
                     cache_file.parent.mkdir(parents=True, exist_ok=True)
                     with cache_file.open("wb") as target:
                         shutil.copyfileobj(source, target, length=1024 * 256)
+                elapsed_ms = (time.perf_counter() - started_at) * 1000
+                if elapsed_ms > 500:
+                    logger.info(
+                        "Extracted Codex page slowly: chapter=%s page=%s elapsed=%.1fms.",
+                        chapter_id,
+                        page_name,
+                        elapsed_ms,
+                    )
                 return cache_file
         except Exception as exc:
-            print(f"Error reading page: {exc}")
+            logger.exception("Error reading Codex page %s from %s: %s", page_name, cbz_path, exc)
             return None
 
     @classmethod
@@ -158,7 +170,7 @@ class VaultReader:
                 thumb_cache_file.write_bytes(buffer.getvalue())
                 return thumb_cache_file
         except Exception as exc:
-            print(f"Error generating thumbnail: {exc}")
+            logger.exception("Error generating Codex thumbnail %s from %s: %s", page_name, cbz_path, exc)
             return page_file
 
     @classmethod

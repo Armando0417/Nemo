@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 from http import HTTPStatus
+import logging
 import os
 from pathlib import Path
 import subprocess
@@ -13,6 +14,8 @@ from urllib import request as urllib_request
 import webbrowser
 
 from gates.config import GateConfig, get_gate_map
+
+logger = logging.getLogger("nemo.gates")
 
 
 @dataclass
@@ -122,11 +125,14 @@ class GateManager:
 
     def start_gate(self, slug: str, wait_for_ready: bool = True, timeout: float = 20.0) -> dict[str, Any]:
         gate = self._require_gate(slug)
+        logger.info("Start requested for gate %s on port %s.", gate.slug, gate.port)
         if not gate.jellyfin_exe.exists():
+            logger.error("Gate %s executable is missing: %s", gate.slug, gate.jellyfin_exe)
             raise FileNotFoundError(f"Jellyfin executable not found: {gate.jellyfin_exe}")
 
         existing = self.check_gate(slug)
         if existing["state"] in {"starting_up", "ready"}:
+            logger.info("Gate %s is already %s.", gate.slug, existing["state"])
             existing["action"] = "already_running"
             return existing
 
@@ -139,21 +145,26 @@ class GateManager:
             if existing_process is None:
                 process = self._spawn_gate(gate)
                 self._processes[slug] = process
+                logger.info("Gate %s spawned with pid %s.", gate.slug, process.pid)
                 self._invalidate_status(gate.slug)
 
         if wait_for_ready:
+            logger.info("Waiting for gate %s readiness.", gate.slug)
             self._wait_for_gate(gate, timeout=timeout)
 
         status = self.check_gate(slug, use_cache=False)
         status["action"] = "started"
+        logger.info("Gate %s start result: state=%s ready=%s.", gate.slug, status["state"], status["ready"])
         return status
 
     def stop_gate(self, slug: str, wait_timeout: float = 10.0) -> dict[str, Any]:
         gate = self._require_gate(slug)
+        logger.info("Stop requested for gate %s.", gate.slug)
         stopped_pids: list[int] = []
 
         managed_process = self._get_live_process(slug)
         if managed_process is not None:
+            logger.info("Stopping managed gate %s pid %s.", gate.slug, managed_process.pid)
             self._kill_pid(managed_process.pid)
             stopped_pids.append(managed_process.pid)
             self._processes.pop(slug, None)
@@ -161,6 +172,7 @@ class GateManager:
 
         port_pid = self._find_listening_pid(gate.port)
         if port_pid is not None and port_pid not in stopped_pids:
+            logger.info("Stopping gate %s listener pid %s on port %s.", gate.slug, port_pid, gate.port)
             self._kill_pid(port_pid)
             stopped_pids.append(port_pid)
             self._invalidate_status(gate.slug)
@@ -174,6 +186,7 @@ class GateManager:
         status = self.check_gate(slug, use_cache=False)
         status["action"] = "stopped" if stopped_pids else "not_running"
         status["stopped_pids"] = stopped_pids
+        logger.info("Gate %s stop result: %s pids=%s.", gate.slug, status["action"], stopped_pids)
         return status
 
     def open_gate(
@@ -202,6 +215,7 @@ class GateManager:
             try:
                 results.append(self.stop_gate(slug))
             except Exception as exc:  # noqa: BLE001
+                logger.exception("Failed to stop gate %s during shutdown.", slug)
                 gate = self._gates.get(slug)
                 results.append(
                     {
@@ -250,6 +264,14 @@ class GateManager:
             str(gate.log_dir),
         ]
 
+        logger.info(
+            "Launching gate %s executable=%s data=%s cache=%s logs=%s.",
+            gate.slug,
+            gate.jellyfin_exe,
+            gate.data_dir,
+            gate.cache_dir,
+            gate.log_dir,
+        )
         return subprocess.Popen(
             args,
             cwd=str(gate.jellyfin_exe.parent),

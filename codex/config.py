@@ -70,6 +70,6 @@ def get_settings() -> CodexSettings:
         cache_dir=cache_dir,
         library_root=library_root,
         debug=env_flag("CODEX_VAULT_DEBUG", False),
-        background_warming=env_flag("CODEX_VAULT_BACKGROUND_WARMING", False),
+        background_warming=env_flag("CODEX_VAULT_BACKGROUND_WARMING", True),
         selective_index_html=selective_index_html,
     )

@@ -3,12 +3,15 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from functools import lru_cache
 import ipaddress
+import logging
 import os
 import socket
 import struct
 import threading
 import time
 from typing import Any
+
+logger = logging.getLogger("nemo.dns")
 
 
 def _env_flag(name: str, default: bool) -> bool:
@@ -92,8 +95,10 @@ class NemoDnsResolver:
     def start(self) -> dict[str, Any]:
         with self._lock:
             if not self.settings.enabled:
+                logger.info("DNS resolver is disabled.")
                 return self.status()
             if self._thread is not None and self._thread.is_alive():
+                logger.info("DNS resolver is already running.")
                 return self.status()
 
             self._stop_event.clear()
@@ -103,9 +108,17 @@ class NemoDnsResolver:
                 daemon=True,
             )
             self._thread.start()
+            logger.info(
+                "DNS resolver starting on %s:%s for %s -> %s.",
+                self.settings.bind_host,
+                self.settings.bind_port,
+                self.settings.hostname,
+                self.settings.resolve_ip,
+            )
         return self.status()
 
     def stop(self) -> dict[str, Any]:
+        logger.info("Stopping DNS resolver.")
         with self._lock:
             self._stop_event.set()
             sock = self._socket
@@ -146,12 +159,18 @@ class NemoDnsResolver:
             self._socket = sock
             self._started_at = time.time()
             self._last_error = None
+            logger.info(
+                "DNS resolver listening on %s:%s.",
+                self.settings.bind_host,
+                self.settings.bind_port,
+            )
         except OSError as exc:
             self._failures += 1
             self._last_error = (
                 f"Unable to bind DNS on {self.settings.bind_host}:{self.settings.bind_port}: {exc}. "
                 "On Windows, UDP port 53 usually requires Administrator or a free port."
             )
+            logger.error(self._last_error)
             return
 
         while not self._stop_event.is_set():
@@ -163,17 +182,33 @@ class NemoDnsResolver:
                 break
 
             self._requests += 1
+            qname = "<unknown>"
+            qtype = 0
+            try:
+                _question, qname, qtype, _qclass = _parse_question(data)
+            except Exception:
+                pass
             try:
                 response, handled_locally = self._resolve_packet(data)
                 if response is None:
                     response = self._forward_packet(data)
                     self._forwarded += 1
+                    logger.debug("DNS forwarded %s type=%s from %s.", qname, qtype, address[0])
                 elif handled_locally:
                     self._local_answers += 1
+                    logger.info(
+                        "DNS handled %s type=%s for %s with local rule %s -> %s.",
+                        qname,
+                        qtype,
+                        address[0],
+                        self.settings.hostname,
+                        self.settings.resolve_ip,
+                    )
                 sock.sendto(response, address)
             except Exception as exc:  # noqa: BLE001
                 self._failures += 1
                 self._last_error = str(exc)
+                logger.exception("DNS query failed for %s from %s.", qname, address[0])
 
     def _resolve_packet(self, data: bytes) -> tuple[bytes | None, bool]:
         if len(data) < 12:

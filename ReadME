@@ -35,12 +35,6 @@ Tailscale:
 - Start: `http://<server-ip>:8000/api/startup-services/tailscale/start`
 - Stop managed process: `http://<server-ip>:8000/api/startup-services/tailscale/stop`
 
-AdGuard:
-- Check: `http://<server-ip>:8000/api/startup-services/adguard/check`
-- Start: `http://<server-ip>:8000/api/startup-services/adguard/start`
-- Stop managed process: `http://<server-ip>:8000/api/startup-services/adguard/stop`
-- Auto-start now defaults to off; Nemo's built-in DNS resolver replaces AdGuard for `chaldeas.home`.
-
 Nemo DNS:
 - Status: `http://<server-ip>:8000/api/dns`
 - `NEMO_DNS_ENABLED`: defaults to `true`.
@@ -54,11 +48,6 @@ Startup Service Environment:
 - `TAILSCALE_COMMAND`: overrides the Tailscale command entirely.
 - `NEMO_AUTOSTART_TAILSCALE`: defaults to `1`.
 - `TAILSCALE_VISIBLE_CONSOLE`: defaults to `0`.
-- `ADGUARD_EXE`: defaults to `C:\Program Files\AdGuardHome\AdGuardHome.exe`
-- `ADGUARD_COMMAND`: overrides the AdGuard command entirely.
-- `ADGUARD_CWD`: working directory for AdGuard.
-- `NEMO_AUTOSTART_ADGUARD`: defaults to `1`.
-- `ADGUARD_VISIBLE_CONSOLE`: defaults to `1`, so AdGuard opens with a terminal window.
 
 Priestess Alerts:
 - Status: `http://<server-ip>:8000/api/priestess/status`

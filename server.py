@@ -1,9 +1,15 @@
 import asyncio
+import logging
 import os
 import socket
 import sys
+import time
 
-from fastapi import FastAPI
+from nemo_logging import configure_logging
+
+configure_logging()
+
+from fastapi import FastAPI, Request
 
 from routers.codex import router as codex_router
 from routers.dns import router as dns_router
@@ -21,6 +27,9 @@ from startup_services import get_startup_service_manager
 if sys.platform == "win32":
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
+logger = logging.getLogger("nemo.server")
+request_logger = logging.getLogger("nemo.http")
+
 app = FastAPI(title="Nemo")
 app.include_router(codex_router)
 app.include_router(ishtar_router)
@@ -32,19 +41,76 @@ app.include_router(dns_router)
 app.include_router(proxy_router)
 
 
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    started_at = time.perf_counter()
+    client = request.client.host if request.client else "unknown"
+    path = request.url.path
+    if request.url.query:
+        path = f"{path}?{request.url.query}"
+    try:
+        response = await call_next(request)
+    except Exception:
+        elapsed_ms = (time.perf_counter() - started_at) * 1000
+        request_logger.exception(
+            "%s %s failed after %.1fms from %s",
+            request.method,
+            path,
+            elapsed_ms,
+            client,
+        )
+        raise
+
+    elapsed_ms = (time.perf_counter() - started_at) * 1000
+    level = logging.WARNING if response.status_code >= 400 else logging.INFO
+    request_logger.log(
+        level,
+        "%s %s -> %s %.1fms from %s",
+        request.method,
+        path,
+        response.status_code,
+        elapsed_ms,
+        client,
+    )
+    return response
+
+
 @app.on_event("startup")
 async def start_nemo_startup_services() -> None:
-    get_startup_service_manager().start_auto_services()
-    get_dns_resolver().start()
+    logger.info("Nemo startup begins.")
+    startup_results = get_startup_service_manager().start_auto_services()
+    for result in startup_results:
+        logger.info(
+            "Startup service %s: %s",
+            result.get("slug"),
+            result.get("action", result.get("state", "unknown")),
+        )
+    dns_status = get_dns_resolver().start()
+    logger.info(
+        "DNS resolver status: running=%s hostname=%s resolve_ip=%s",
+        dns_status.get("running"),
+        dns_status.get("hostname"),
+        dns_status.get("resolve_ip"),
+    )
     get_priestess_manager().start()
+    logger.info("Priestess monitoring started.")
+    logger.info("Nemo startup complete.")
 
 
 @app.on_event("shutdown")
 async def shutdown_managed_gates() -> None:
-    get_gate_manager().shutdown_managed()
-    get_dns_resolver().stop()
-    get_startup_service_manager().shutdown_managed()
+    logger.info("Nemo shutdown begins.")
+    gate_results = get_gate_manager().shutdown_managed()
+    for result in gate_results:
+        logger.info("Gate shutdown %s: %s", result.get("slug"), result.get("action"))
+    dns_status = get_dns_resolver().stop()
+    logger.info("DNS resolver stopped: running=%s", dns_status.get("running"))
+    service_results = get_startup_service_manager().shutdown_managed()
+    for result in service_results:
+        logger.info("Startup service shutdown %s: %s", result.get("slug"), result.get("action"))
     get_priestess_manager().stop()
+    logger.info("Priestess monitoring stopped.")
+    logger.info("Nemo shutdown complete.")
 
 
 @app.get("/")
@@ -74,7 +140,7 @@ async def read_root():
             },
             "startup_services": {
                 "api": "/api/startup-services",
-                "items": ["tailscale", "adguard"],
+                "items": ["tailscale"],
             },
             "priestess": {
                 "api": "/api/priestess",
@@ -123,4 +189,5 @@ if __name__ == "__main__":
         print(exc, file=sys.stderr)
         raise SystemExit(1) from exc
 
-    uvicorn.run("server:app", host=host, port=port)
+    logger.info("Starting uvicorn on %s:%s", host, port)
+    uvicorn.run("server:app", host=host, port=port, access_log=True, log_config=None)

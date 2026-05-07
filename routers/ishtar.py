@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import mimetypes
 import os
 import re
@@ -20,6 +21,8 @@ from ishtar.source import (
     iter_gallery_folders,
     resolve_gallery_path,
 )
+
+logger = logging.getLogger("nemo.ishtar")
 
 FilterMode = Literal["all", "any"]
 SearchSort = Literal[
@@ -235,7 +238,7 @@ async def populate_tomb(base_path: str = str(get_source_root())):
             if result:
                 archived_count += 1
         except Exception as exc:
-            print(f"Error archiving {folder}: {exc}")
+            logger.exception("Error archiving Ishtar gallery %s: %s", folder, exc)
             continue
 
     return {

@@ -68,37 +68,8 @@ def _tailscale_config() -> StartupServiceConfig:
     )
 
 
-def _adguard_config() -> StartupServiceConfig:
-    command = os.getenv("ADGUARD_COMMAND")
-    if command:
-        args = tuple(_split_command(command))
-    else:
-        exe = _env_path(
-            "ADGUARD_EXE",
-            r"C:\Program Files\AdGuardHome\AdGuardHome.exe",
-        )
-        args = (str(exe),)
-
-    cwd = os.getenv("ADGUARD_CWD")
-    return StartupServiceConfig(
-        slug="adguard",
-        name="AdGuard",
-        command=args,
-        cwd=Path(cwd).expanduser() if cwd else Path(args[0]).expanduser().parent,
-        process_names=tuple(
-            name.strip()
-            for name in os.getenv("ADGUARD_PROCESS_NAMES", "AdGuardHome.exe,AdGuard.exe").split(",")
-            if name.strip()
-        ),
-        visible_console=_env_flag("ADGUARD_VISIBLE_CONSOLE", True),
-        auto_start=_env_flag("NEMO_AUTOSTART_ADGUARD", False),
-        stop_managed_on_shutdown=_env_flag("NEMO_STOP_ADGUARD_ON_SHUTDOWN", False),
-    )
-
-
 STARTUP_SERVICE_CONFIGS = (
     _tailscale_config(),
-    _adguard_config(),
 )
 
 

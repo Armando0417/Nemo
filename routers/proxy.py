@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -14,6 +15,7 @@ from gates import get_gate_manager
 from gates.config import GateConfig, get_gate_map
 
 router = APIRouter(tags=["Gate Proxy"])
+logger = logging.getLogger("nemo.proxy")
 
 GATE_LOADER_PATH = Path(__file__).resolve().parent.parent / "gate_loader.html"
 HOP_BY_HOP_HEADERS = {
@@ -115,9 +117,11 @@ async def _proxy_http(gate_slug: str, path: str, request: Request) -> StreamingR
     gate = _require_proxy_gate(gate_slug)
     status = gate_manager.check_gate(gate.slug)
     if not status.get("ready") and not status.get("running"):
+        logger.info("Gate proxy %s offline; serving loader for %s.", gate.slug, request.url.path)
         return _loader_or_error(gate, request)
 
     target_url = _target_url(gate, path, request.url.query)
+    logger.info("Proxying %s %s -> %s.", request.method, request.url.path, target_url)
     client = httpx.AsyncClient(follow_redirects=False, timeout=None)
     try:
         outbound = client.build_request(
@@ -129,6 +133,7 @@ async def _proxy_http(gate_slug: str, path: str, request: Request) -> StreamingR
         response = await client.send(outbound, stream=True)
     except httpx.RequestError as exc:
         await client.aclose()
+        logger.warning("Gate proxy %s request failed: %s", gate.slug, exc)
         return _loader_or_error(gate, request)
 
     return StreamingResponse(
@@ -178,11 +183,13 @@ async def _proxy_websocket(gate_slug: str, path: str, websocket: WebSocket) -> N
     gate = _require_proxy_gate(gate_slug)
     status = gate_manager.check_gate(gate.slug)
     if not status.get("ready") and not status.get("running"):
+        logger.info("Gate websocket proxy %s offline; rejecting connection.", gate.slug)
         await websocket.close(code=1013, reason=f"{gate.name} is offline.")
         return
 
     query = urlencode(websocket.query_params.multi_items())
     target_url = _target_ws_url(gate, path, query)
+    logger.info("Proxying websocket /%s/%s -> %s.", gate.slug, path, target_url)
     await websocket.accept()
     try:
         async with websockets.connect(
@@ -201,8 +208,10 @@ async def _proxy_websocket(gate_slug: str, path: str, websocket: WebSocket) -> N
             for task in done:
                 task.result()
     except WebSocketDisconnect:
+        logger.info("Gate websocket proxy %s disconnected.", gate.slug)
         return
     except Exception:  # noqa: BLE001
+        logger.exception("Gate websocket proxy %s failed.", gate.slug)
         try:
             await websocket.close(code=1011)
         except RuntimeError:

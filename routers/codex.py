@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import logging
 import mimetypes
 import os
 from pathlib import Path
+import time
 
 from fastapi import APIRouter, BackgroundTasks, HTTPException, Response
 from fastapi.responses import FileResponse, HTMLResponse
@@ -15,6 +17,8 @@ from codex.services.librarian import Librarian
 from codex.services.reader import VaultReader
 from codex.services.scanner import Indexer
 from codex.services.simple_indexer import MappingMode, build_simple_index
+
+logger = logging.getLogger("nemo.codex")
 
 settings = get_settings()
 VaultReader.configure(settings.cache_dir)
@@ -59,7 +63,7 @@ def resolve_series_base_path(series: Manga_Series) -> Path:
 
 def migrate_series_paths() -> None:
     if not settings.library_root.exists():
-        print(f"WARNING: Library root does not exist: {settings.library_root}")
+        logger.warning("Codex library root does not exist: %s", settings.library_root)
         return
 
     with Session(librarian.engine) as session:
@@ -81,9 +85,10 @@ def migrate_series_paths() -> None:
 
             existing_series_id = reserved_paths.get(preferred_norm)
             if existing_series_id and existing_series_id != series.id:
-                print(
-                    f"WARNING: Skipping path migration for '{series.title}' because "
-                    f"{preferred_path} is already assigned."
+                logger.warning(
+                    "Skipping Codex path migration for %s because %s is already assigned.",
+                    series.title,
+                    preferred_path,
                 )
                 continue
 
@@ -95,10 +100,16 @@ def migrate_series_paths() -> None:
 
         if updated_count:
             session.commit()
-            print(f"Migrated {updated_count} series paths to {settings.library_root}")
+            logger.info("Migrated %s Codex series paths to %s.", updated_count, settings.library_root)
 
 
 migrate_series_paths()
+
+
+def warm_adjacent_pages_after_response(full_path: Path, chapter_id: int, page_name: str) -> None:
+    image_list = VaultReader.get_image_list(full_path)
+    if image_list:
+        VaultReader.warm_adjacent_pages(full_path, chapter_id, image_list, page_name)
 
 
 class SelectiveIndexRequest(BaseModel):
@@ -296,6 +307,7 @@ def selective_index_run(payload: SelectiveIndexRequest) -> dict[str, object]:
 
 @api_router.get("/view/chapter/{chapter_id}/pages")
 def get_pages(chapter_id: int, background_tasks: BackgroundTasks, response: Response) -> list[str]:
+    started_at = time.perf_counter()
     with Session(librarian.engine) as session:
         chapter = session.get(Manga_Chapter, chapter_id)
         if not chapter:
@@ -308,6 +320,15 @@ def get_pages(chapter_id: int, background_tasks: BackgroundTasks, response: Resp
         full_path = resolve_series_base_path(series) / chapter.folder_path
         image_list = VaultReader.get_image_list(full_path)
         response.headers.update(LIST_CACHE_HEADERS)
+        elapsed_ms = (time.perf_counter() - started_at) * 1000
+        if elapsed_ms > 500:
+            logger.info(
+                "Codex page list loaded slowly: chapter=%s pages=%s elapsed=%.1fms path=%s.",
+                chapter_id,
+                len(image_list),
+                elapsed_ms,
+                full_path,
+            )
         if settings.background_warming and image_list:
             background_tasks.add_task(
                 VaultReader.warm_chapter_assets,
@@ -320,6 +341,7 @@ def get_pages(chapter_id: int, background_tasks: BackgroundTasks, response: Resp
 
 @api_router.get("/view/chapter/{chapter_id}/page/{page_name}")
 def get_page(chapter_id: int, page_name: str, background_tasks: BackgroundTasks) -> Response:
+    started_at = time.perf_counter()
     with Session(librarian.engine) as session:
         chapter = session.get(Manga_Chapter, chapter_id)
         if not chapter:
@@ -330,21 +352,27 @@ def get_page(chapter_id: int, page_name: str, background_tasks: BackgroundTasks)
             raise HTTPException(status_code=404, detail="Series not found")
 
         full_path = resolve_series_base_path(series) / chapter.folder_path
-        image_list = VaultReader.get_image_list(full_path)
+        if settings.background_warming:
+            background_tasks.add_task(
+                warm_adjacent_pages_after_response,
+                full_path,
+                chapter.id,
+                page_name,
+            )
         page_file = VaultReader.ensure_page_cached(full_path, chapter_id, page_name)
         if page_file is None:
             raise HTTPException(status_code=404, detail="Page not found")
 
-        if settings.background_warming and image_list:
-            background_tasks.add_task(
-                VaultReader.warm_adjacent_pages,
-                full_path,
-                chapter.id,
-                image_list,
-                page_name,
-            )
-
         media_type = VaultReader.get_page_media_type(page_name)
+        elapsed_ms = (time.perf_counter() - started_at) * 1000
+        if elapsed_ms > 500:
+            logger.info(
+                "Codex page served slowly: chapter=%s page=%s elapsed=%.1fms cached_file=%s.",
+                chapter_id,
+                page_name,
+                elapsed_ms,
+                page_file,
+            )
         return FileResponse(page_file, media_type=media_type, headers=IMAGE_CACHE_HEADERS)
 
 

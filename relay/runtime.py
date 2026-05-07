@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import logging
 from pathlib import Path
 import shlex
 import subprocess
@@ -11,16 +12,25 @@ from typing import Any
 from relay.config import RelaySettings
 from relay.service import CopypartyClient
 
+logger = logging.getLogger("nemo.copyparty")
+
 
 class CopypartyRuntimeManager:
     def __init__(self, settings: RelaySettings):
         self.settings = settings
         self._lock = threading.Lock()
         self._process: subprocess.Popen | None = None
+        self._last_reachable: bool | None = None
 
     def status(self, client: CopypartyClient) -> dict[str, Any]:
         reachable, detail, status_code = client.probe(timeout=self.settings.copyparty_status_timeout)
         process = self._get_live_process()
+        if reachable != self._last_reachable:
+            if reachable:
+                logger.info("Copyparty is reachable at %s.", client.base_url)
+            else:
+                logger.warning("Copyparty is not reachable at %s: %s", client.base_url, detail or "unknown error")
+            self._last_reachable = reachable
         return {
             "reachable": reachable,
             "detail": detail,
@@ -39,9 +49,11 @@ class CopypartyRuntimeManager:
 
         should_start = self.settings.copyparty_auto_start if start_if_needed is None else start_if_needed
         if not should_start:
+            logger.info("Copyparty auto-start skipped because it is disabled.")
             return status
 
         if not self.settings.copyparty_launch_command:
+            logger.warning("Copyparty is unreachable and no launch command is configured.")
             status["detail"] = (
                 status["detail"]
                 or "Copyparty is not reachable and RELAY_COPYPARTY_LAUNCH_COMMAND is not configured."
@@ -56,6 +68,7 @@ class CopypartyRuntimeManager:
             process = self._get_live_process()
             if process is None:
                 process = self._spawn_process()
+                logger.info("Copyparty spawned with pid %s.", process.pid)
 
         deadline = time.time() + self.settings.copyparty_startup_timeout
         while time.time() < deadline:
@@ -63,6 +76,7 @@ class CopypartyRuntimeManager:
             if status["reachable"]:
                 return status
             if process.poll() is not None:
+                logger.error("Copyparty exited with code %s before becoming reachable.", process.returncode)
                 status["detail"] = (
                     f"Copyparty launch process exited with code {process.returncode} before becoming reachable."
                 )
@@ -71,6 +85,7 @@ class CopypartyRuntimeManager:
 
         status = self.status(client)
         if not status["reachable"]:
+            logger.error("Timed out waiting for Copyparty at %s.", client.base_url)
             status["detail"] = (
                 status["detail"]
                 or f"Timed out waiting for Copyparty at {client.base_url}."
@@ -97,6 +112,12 @@ class CopypartyRuntimeManager:
         env.setdefault("RELAY_DUMP_ROOT", self.settings.dump_root)
 
         creationflags = getattr(subprocess, "CREATE_NO_WINDOW", 0)
+        logger.info(
+            "Launching Copyparty executable=%s cwd=%s runtime=%s.",
+            command[0],
+            self.settings.copyparty_launch_cwd,
+            runtime_dir,
+        )
         process = subprocess.Popen(
             command,
             cwd=str(self.settings.copyparty_launch_cwd),
@@ -114,6 +135,7 @@ class CopypartyRuntimeManager:
         if process is None:
             return None
         if process.poll() is not None:
+            logger.warning("Managed Copyparty process exited with code %s.", process.returncode)
             self._process = None
             return None
         return process

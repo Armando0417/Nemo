@@ -1,12 +1,15 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import logging
 from pathlib import Path
 import subprocess
 import threading
 from typing import Any
 
 from startup_services.config import StartupServiceConfig, get_startup_service_map
+
+logger = logging.getLogger("nemo.startup")
 
 
 @dataclass
@@ -40,10 +43,13 @@ class StartupServiceManager:
         results: list[dict[str, Any]] = []
         for slug, service in self._services.items():
             if not service.auto_start:
+                logger.info("Startup service %s is configured but auto-start is disabled.", slug)
                 continue
             try:
+                logger.info("Auto-starting startup service %s.", slug)
                 results.append(self.start_service(slug))
             except Exception as exc:  # noqa: BLE001
+                logger.exception("Failed to auto-start startup service %s.", slug)
                 results.append(
                     {
                         "slug": slug,
@@ -89,9 +95,11 @@ class StartupServiceManager:
         service = self._require_service(slug)
         status = self.check_service(service.slug)
         if status["running"]:
+            logger.info("Startup service %s is already running on pid %s.", service.slug, status.get("pid"))
             status["action"] = "already_running"
             return status
         if status["state"] in {"missing_executable", "not_configured"}:
+            logger.error("Startup service %s cannot start: %s", service.slug, status.get("detail"))
             raise FileNotFoundError(status["detail"] or f"{service.name} is not configured.")
 
         with self._lock:
@@ -100,11 +108,13 @@ class StartupServiceManager:
                 self._processes[service.slug] = self._spawn_service(service)
 
         status = self.check_service(service.slug)
+        logger.info("Startup service %s started with pid %s.", service.slug, status.get("pid"))
         status["action"] = "started"
         return status
 
     def stop_service(self, slug: str) -> dict[str, Any]:
         service = self._require_service(slug)
+        logger.info("Stopping startup service %s.", service.slug)
         stopped_pids: list[int] = []
         managed_process = self._get_live_process(service.slug)
         if managed_process is not None:
@@ -115,6 +125,7 @@ class StartupServiceManager:
         status = self.check_service(service.slug)
         status["action"] = "stopped" if stopped_pids else "not_managed"
         status["stopped_pids"] = stopped_pids
+        logger.info("Startup service %s stop result: %s.", service.slug, status["action"])
         return status
 
     def shutdown_managed(self) -> list[dict[str, Any]]:
@@ -124,10 +135,12 @@ class StartupServiceManager:
             if service is None or not service.stop_managed_on_shutdown:
                 continue
             try:
+                logger.info("Stopping managed startup service %s on Nemo shutdown.", slug)
                 self._kill_pid(process.pid)
                 self._processes.pop(slug, None)
                 results.append({"slug": slug, "action": "stopped", "pid": process.pid})
             except Exception as exc:  # noqa: BLE001
+                logger.exception("Failed to stop startup service %s during shutdown.", slug)
                 results.append({"slug": slug, "action": "shutdown_error", "detail": str(exc)})
         return results
 
@@ -160,6 +173,13 @@ class StartupServiceManager:
             creationflags |= getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
         cwd = str(service.cwd) if service.cwd and service.cwd.exists() else None
+        logger.info(
+            "Launching startup service %s executable=%s cwd=%s visible_console=%s.",
+            service.slug,
+            service.command[0] if service.command else "not-configured",
+            cwd or "<default>",
+            service.visible_console,
+        )
         return subprocess.Popen(
             list(service.command),
             cwd=cwd,
